@@ -8,6 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
+#define NOTIFICATION_METodoListItemDidToggleCompleted @"NOTIFICATION_METodoListItemDidToggleCompleted"
+
 @interface METodoListItem : NSObject
 
 @property (strong, nonatomic) NSString *title;

@@ -15,6 +15,9 @@
 		F6FA65541B876AE0001EED3F /* TodoListTests.m in Sources */ = {isa = PBXBuildFile; fileRef = F6FA65531B876AE0001EED3F /* TodoListTests.m */; };
 		F6FA65601B877053001EED3F /* METodoListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F6FA655F1B877053001EED3F /* METodoListViewController.m */; };
 		F6FA65641B8770A7001EED3F /* METodoListItem.m in Sources */ = {isa = PBXBuildFile; fileRef = F6FA65631B8770A7001EED3F /* METodoListItem.m */; };
+		F6FA65671B8775A1001EED3F /* MEAddTodoItemViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = F6FA65661B8775A1001EED3F /* MEAddTodoItemViewController.m */; };
+		F6FA656C1B877AC0001EED3F /* METodoListItemTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = F6FA656A1B877AC0001EED3F /* METodoListItemTableViewCell.m */; };
+		F6FA656D1B877AC0001EED3F /* METodoListItemTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = F6FA656B1B877AC0001EED3F /* METodoListItemTableViewCell.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,6 +46,11 @@
 		F6FA655F1B877053001EED3F /* METodoListViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = METodoListViewController.m; sourceTree = "<group>"; };
 		F6FA65621B8770A7001EED3F /* METodoListItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = METodoListItem.h; sourceTree = "<group>"; };
 		F6FA65631B8770A7001EED3F /* METodoListItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = METodoListItem.m; sourceTree = "<group>"; };
+		F6FA65651B8775A1001EED3F /* MEAddTodoItemViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MEAddTodoItemViewController.h; sourceTree = "<group>"; };
+		F6FA65661B8775A1001EED3F /* MEAddTodoItemViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MEAddTodoItemViewController.m; sourceTree = "<group>"; };
+		F6FA65691B877AC0001EED3F /* METodoListItemTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = METodoListItemTableViewCell.h; sourceTree = "<group>"; };
+		F6FA656A1B877AC0001EED3F /* METodoListItemTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = METodoListItemTableViewCell.m; sourceTree = "<group>"; };
+		F6FA656B1B877AC0001EED3F /* METodoListItemTableViewCell.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = METodoListItemTableViewCell.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +92,7 @@
 		F6FA65361B876AE0001EED3F /* TodoList */ = {
 			isa = PBXGroup;
 			children = (
+				F6FA65681B877A86001EED3F /* Views */,
 				F6FA65611B877082001EED3F /* Models */,
 				F6FA655D1B877053001EED3F /* ViewControllers */,
 				F6FA653B1B876AE0001EED3F /* AppDelegate.h */,
@@ -127,6 +136,8 @@
 			children = (
 				F6FA655E1B877053001EED3F /* METodoListViewController.h */,
 				F6FA655F1B877053001EED3F /* METodoListViewController.m */,
+				F6FA65651B8775A1001EED3F /* MEAddTodoItemViewController.h */,
+				F6FA65661B8775A1001EED3F /* MEAddTodoItemViewController.m */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -138,6 +149,16 @@
 				F6FA65631B8770A7001EED3F /* METodoListItem.m */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		F6FA65681B877A86001EED3F /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F6FA65691B877AC0001EED3F /* METodoListItemTableViewCell.h */,
+				F6FA656A1B877AC0001EED3F /* METodoListItemTableViewCell.m */,
+				F6FA656B1B877AC0001EED3F /* METodoListItemTableViewCell.xib */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -222,6 +243,7 @@
 			files = (
 				F6FA65431B876AE0001EED3F /* Main.storyboard in Resources */,
 				F6FA65481B876AE0001EED3F /* LaunchScreen.xib in Resources */,
+				F6FA656D1B877AC0001EED3F /* METodoListItemTableViewCell.xib in Resources */,
 				F6FA65451B876AE0001EED3F /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -242,7 +264,9 @@
 			files = (
 				F6FA653D1B876AE0001EED3F /* AppDelegate.m in Sources */,
 				F6FA65601B877053001EED3F /* METodoListViewController.m in Sources */,
+				F6FA656C1B877AC0001EED3F /* METodoListItemTableViewCell.m in Sources */,
 				F6FA65641B8770A7001EED3F /* METodoListItem.m in Sources */,
+				F6FA65671B8775A1001EED3F /* MEAddTodoItemViewController.m in Sources */,
 				F6FA653A1B876AE0001EED3F /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -438,6 +462,7 @@
 				F6FA65591B876AE0001EED3F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		F6FA655A1B876AE0001EED3F /* Build configuration list for PBXNativeTarget "TodoListTests" */ = {
 			isa = XCConfigurationList;
@@ -446,6 +471,7 @@
 				F6FA655C1B876AE0001EED3F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

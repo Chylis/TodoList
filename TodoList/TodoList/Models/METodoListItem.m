@@ -10,4 +10,10 @@
 
 @implementation METodoListItem
 
+-(void)setCompleted:(BOOL)completed
+{
+    _completed = completed;
+    [[NSNotificationCenter defaultCenter] postNotificationName:NOTIFICATION_METodoListItemDidToggleCompleted object:self];
+}
+
 @end
