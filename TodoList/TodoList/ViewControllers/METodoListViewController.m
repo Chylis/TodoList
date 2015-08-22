@@ -13,6 +13,8 @@
 
 #import "METodoListItemTableViewCell.h"
 
+#import "NSUserDefaults+METodoListItems.h"
+
 typedef NS_ENUM(NSInteger, METodoListSection)
 {
     METodoListSectionIncompleted = 0,
@@ -37,7 +39,14 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    [self loadStoredDatasource];
     [self setupTableView];
+}
+
+-(void)loadStoredDatasource
+{
+    self.completedItems = [[NSMutableArray alloc] initWithArray:[NSUserDefaults completedTodoItems]];
+    self.incompletedItems = [[NSMutableArray alloc] initWithArray:[NSUserDefaults incompletedTodoItems]];
 }
 
 -(void)setupTableView
@@ -70,25 +79,6 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 {
     [super viewWillDisappear:animated];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-}
-#pragma mark - Properties
-
--(NSMutableArray*)completedItems
-{
-#warning load from storage
-    if (!_completedItems){
-        _completedItems = [NSMutableArray new];
-    }
-    return _completedItems;
-}
-
--(NSMutableArray*)incompletedItems
-{
-#warning load from storage
-    if (!_incompletedItems){
-        _incompletedItems = [NSMutableArray new];
-    }
-    return _incompletedItems;
 }
 
 #pragma mark - UITableViewDataSource
@@ -215,6 +205,7 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     dispatch_async(dispatch_get_main_queue(), ^{
         [vc.presentingViewController dismissViewControllerAnimated:YES completion:^{
             [self addItem:item toSection:METodoListSectionIncompleted];
+            [self saveState];
         }];
     });
 }
@@ -290,18 +281,27 @@ typedef NS_ENUM(NSInteger, METodoListSection)
                                             handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
                                                 METodoListItem *item = [self itemAtIndexPath:indexPath];
                                                 [self deleteItem:item fromSection:indexPath.section];
+                                                [self saveState];
                                             }];
 }
 
 /*
  - Triggered when the 'METodoItem.completed' property is updated
- - Moves the cell from one section to the other, depending on the 'item.completed' value
+ - Updates models and UI: moves the cell from one section to the other, depending on the 'item.completed' value
+ - Updates local storage
  */
 -(void)METodoItemWasUpdated:(NSNotification*)notification
 {
     METodoListItem *item = notification.object;
     NSInteger sourceSection = item.completed ? METodoListSectionIncompleted : METodoListSectionCompleted;
     NSInteger destinationSection = item.completed ? METodoListSectionCompleted : METodoListSectionIncompleted;
+    
+    
+    [CATransaction begin];
+    
+    [CATransaction setCompletionBlock:^{
+        [self saveState];
+    }];
     
     [self.tableView beginUpdates];
     
@@ -318,6 +318,14 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     }
     
     [self.tableView endUpdates];
+    
+    [CATransaction commit];
+}
+
+-(void)saveState
+{
+    [NSUserDefaults updateIncompetedTodoItems:self.incompletedItems];
+    [NSUserDefaults updateCompletedTodoItems:self.completedItems];
 }
 
 
