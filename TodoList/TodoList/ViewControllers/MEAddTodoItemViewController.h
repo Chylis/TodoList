@@ -14,7 +14,6 @@
 @required
 -(void)MEAddTodoItemViewController:(MEAddTodoItemViewController*)vc didCreateItem:(METodoListItem*)item;
 -(void)MEAddTodoItemViewController:(MEAddTodoItemViewController*)vc didEditItem:(METodoListItem*)item;
--(void)MEAddTodoItemViewControllerDidCancelItemCreation:(MEAddTodoItemViewController*)vc;
 @end
 
 @interface MEAddTodoItemViewController : UIViewController

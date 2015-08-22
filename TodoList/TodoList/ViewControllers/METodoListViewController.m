@@ -8,10 +8,9 @@
 
 #import "METodoListViewController.h"
 #import "MEAddTodoItemViewController.h"
+#import "MEPopoverNavigationController.h"
 
 #import "METodoListItem.h"
-
-#import "METodoListItemTableViewCell.h"
 
 #import "NSUserDefaults+METodoListItems.h"
 
@@ -21,6 +20,8 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     METodoListSectionCompleted,
     METodoListSectionCount
 };
+
+static NSString *const CellIdentifierMETodoListCell = @"CellIdentifierMETodoListCell";
 
 @interface METodoListViewController () <UITableViewDataSource, UITableViewDelegate, MEAddTodoItemViewControllerDelegate>
 
@@ -58,11 +59,7 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     self.tableView.estimatedRowHeight = DefaultRowHeight;
     
     //Register Cell
-    NSString *cellId = NSStringFromClass([METodoListItemTableViewCell class]);
-    UINib *nib = [UINib nibWithNibName:cellId bundle:nil];
-    [self.tableView registerNib:nib forCellReuseIdentifier:cellId];
-    
-    self.tableView.allowsSelectionDuringEditing = YES;
+    [self.tableView registerClass:[UITableViewCell class] forCellReuseIdentifier:CellIdentifierMETodoListCell];
 }
 
 -(void)viewWillAppear:(BOOL)animated
@@ -118,39 +115,20 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 
 -(UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    METodoListItemTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:NSStringFromClass([METodoListItemTableViewCell class]) forIndexPath:indexPath];
-    cell.showsReorderControl = YES;
-    
-    switch (indexPath.section) {
-        case METodoListSectionIncompleted:
-            [self configureIncompleteTodoListItemCell:cell atIndexPath:indexPath];
-            break;
-        case METodoListSectionCompleted:
-            [self configureCompletedTodoListItemCell:cell atIndexPath:indexPath];
-            break;
-        default:
-            break;
-    }
-    
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifierMETodoListCell
+                                                            forIndexPath:indexPath];
+    [self configureTodoListItemCell:cell atIndexPath:indexPath];
     return cell;
 }
 
--(void)configureIncompleteTodoListItemCell:(METodoListItemTableViewCell*)cell atIndexPath:(NSIndexPath*)indexPath
+-(void)configureTodoListItemCell:(UITableViewCell*)cell atIndexPath:(NSIndexPath*)indexPath
 {
     METodoListItem *item = [self itemAtIndexPath:indexPath];
-    cell.titleLabel.text = item.title;
-    cell.createdLabel.text = [item.created description];
-    cell.descLabel.text = item.desc;
-    cell.accessoryType = UITableViewCellAccessoryNone;
-}
-
--(void)configureCompletedTodoListItemCell:(METodoListItemTableViewCell*)cell atIndexPath:(NSIndexPath*)indexPath
-{
-    METodoListItem *item = [self itemAtIndexPath:indexPath];
-    cell.titleLabel.text = item.title;
-    cell.createdLabel.text = [item.created description];
-    cell.descLabel.text = item.desc;
-    cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    cell.textLabel.text = item.content;
+    cell.accessoryType = item.completed ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+ 
+    cell.showsReorderControl = YES;
+    cell.textLabel.numberOfLines = 0;
 }
 
 -(void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath
@@ -182,8 +160,7 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     return [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleNormal
                                               title:NSLocalizedString(@"Edit", nil)
                                             handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
-                                                METodoListItem *item = [self itemAtIndexPath:indexPath];
-                                                [self editItem:item];
+                                                [self editItemAtIndexPath:indexPath];
                                             }];
 }
 -(UITableViewRowAction*)actionDeleteItemAtIndexPath:(NSIndexPath*)indexPath
@@ -204,32 +181,46 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    METodoListItem *item = [self itemAtIndexPath:indexPath];
     if (self.isEditing){
-        [self editItem:item];
+        [self editItemAtIndexPath:indexPath];
     } else {
+        METodoListItem *item = [self itemAtIndexPath:indexPath];
         item.completed = !item.completed;
     }
 }
 
 #pragma mark - Navigation
 
--(void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+- (IBAction)addItemButtonTapped:(UIBarButtonItem *)sender
 {
-    if ([segue.identifier isEqualToString:NSStringFromClass([MEAddTodoItemViewController class])]){
-        UINavigationController *destVc = segue.destinationViewController;
-        MEAddTodoItemViewController *addItemVc = (MEAddTodoItemViewController*)destVc.topViewController;
-        [self configureAddItemViewController:addItemVc sender:sender];
-    }
+    [self navigateToAddTodoItemViewController:sender];
 }
 
--(void)configureAddItemViewController:(MEAddTodoItemViewController*)vc sender:(id)sender
+-(void)navigateToAddTodoItemViewController:(id)sender
 {
-    vc.delegate = self;
+    //Create AddItemVC
+    MEAddTodoItemViewController *addItemVc = [self.storyboard instantiateViewControllerWithIdentifier:NSStringFromClass([MEAddTodoItemViewController class])];
+    addItemVc.delegate = self;
     
-    if ([sender isMemberOfClass:[METodoListItem class]]){
-        vc.item = sender;
+    //Create PopoverNavCtrl
+    MEPopoverNavigationController *navCtlr = [self.storyboard instantiateViewControllerWithIdentifier:NSStringFromClass([MEPopoverNavigationController class])];
+    [navCtlr setViewControllers:@[addItemVc]];
+    
+    if ([sender isKindOfClass:[UIBarButtonItem class]]){
+        navCtlr.popoverPresentationController.barButtonItem = sender;
+    } else {
+        NSIndexPath *indexPathOfSender = (NSIndexPath*)sender;
+        METodoListItem *item = [self itemAtIndexPath:indexPathOfSender];
+        addItemVc.item = item;
+        
+        UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:indexPathOfSender];
+        navCtlr.popoverPresentationController.sourceView = cell;
+        navCtlr.popoverPresentationController.permittedArrowDirections = UIPopoverArrowDirectionDown | UIPopoverArrowDirectionUp;
     }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self presentViewController:navCtlr animated:YES completion:nil];
+    });
 }
 
 #pragma mark - MEAddTodoItemViewControllerDelegate
@@ -254,18 +245,11 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     });
 }
 
--(void)MEAddTodoItemViewControllerDidCancelItemCreation:(MEAddTodoItemViewController *)vc
-{
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [vc.presentingViewController dismissViewControllerAnimated:YES completion:nil];
-    });
-}
-
 #pragma mark - Helpers
 
--(void)editItem:(METodoListItem*)item
+-(void)editItemAtIndexPath:(NSIndexPath*)indexPath
 {
-    [self performSegueWithIdentifier:NSStringFromClass([MEAddTodoItemViewController class]) sender:item];
+    [self navigateToAddTodoItemViewController:indexPath];
 }
 
 -(void)deleteItem:(METodoListItem*)item fromSection:(NSInteger)section

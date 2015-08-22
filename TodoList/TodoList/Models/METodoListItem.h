@@ -12,9 +12,7 @@
 
 @interface METodoListItem : NSObject <NSCoding>
 
-@property (strong, nonatomic) NSString *title;
-@property (strong, nonatomic) NSString *desc;
-@property (strong, nonatomic) NSDate *created;
+@property (strong, nonatomic) NSString *content;
 @property (nonatomic) BOOL completed;
 
 //NSCoding

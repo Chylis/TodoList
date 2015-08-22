@@ -10,35 +10,33 @@
 
 #import "METodoListItem.h"
 
-@interface MEAddTodoItemViewController ()
+@interface MEAddTodoItemViewController () <UITextViewDelegate>
 
-@property (weak, nonatomic) IBOutlet UITextField *titleTextField;
 @property (weak, nonatomic) IBOutlet UITextView *descriptionTextView;
 
 @end
 
 @implementation MEAddTodoItemViewController
 
-#pragma mark - Life cycle / Setup
+
+#pragma mark - Life cycle
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    [self prefillTextFields];
+    [self updateUI];
 }
 
 -(void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
-    [self.titleTextField becomeFirstResponder];
+    [self.descriptionTextView becomeFirstResponder];
 }
 
 -(void)viewWillDisappear:(BOOL)animated
 {
     [super viewWillDisappear:animated];
-    [self.titleTextField resignFirstResponder];
     [self.descriptionTextView resignFirstResponder];
-
 }
 
 #pragma mark - Properties
@@ -46,24 +44,38 @@
 -(void)setItem:(METodoListItem *)item
 {
     _item = item;
-    [self prefillTextFields];
+    [self updateUI];
 }
 
 #pragma mark - Helpers
 
--(void)prefillTextFields
+-(void)updateUI
 {
-    self.titleTextField.text = self.item.title;
-    self.descriptionTextView.text = self.item.desc;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self.title = self.item ? @"Edit item" : @"New item";
+        self.descriptionTextView.text = self.item.content;
+        [self updateSaveButtonEnabledState];
+    });
+}
+
+-(void)updateSaveButtonEnabledState
+{
+    self.navigationItem.rightBarButtonItem.enabled = self.descriptionTextView.text.length > 0;
+}
+
+#pragma mark - UITextViewDelegate
+
+-(void)textViewDidChange:(UITextView *)textView
+{
+    [self updateSaveButtonEnabledState];
 }
 
 #pragma mark - IBActions/Callbacks
+
 - (IBAction)saveButtonTapped:(id)sender
 {
     METodoListItem *item = self.item ? : [METodoListItem new];
-    item.title =  item.title = self.titleTextField.text;
-    item.created = [NSDate date];
-    item.desc = self.descriptionTextView.text;
+    item.content = self.descriptionTextView.text;
     
     BOOL isEditingItem = self.item != nil;
     if (isEditingItem){
@@ -75,7 +87,9 @@
 
 - (IBAction)cancelButtonTapped:(id)sender
 {
-    [self.delegate MEAddTodoItemViewControllerDidCancelItemCreation:self];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.presentingViewController dismissViewControllerAnimated:YES completion:nil];
+    });
 }
 
 @end
