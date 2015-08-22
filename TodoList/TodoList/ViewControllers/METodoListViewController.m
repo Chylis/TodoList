@@ -28,7 +28,8 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 
 @property (strong, nonatomic) NSMutableArray *completedItems; //Array of METodoListItem
 @property (strong, nonatomic) NSMutableArray *incompletedItems; //Array of METodoListItem
-@property (strong, nonatomic) NSIndexPath *itemReorderDestinationIndexPath;
+
+@property (strong, nonatomic) NSIndexPath *indexPathOfReorderDestination;
 
 @end
 
@@ -41,6 +42,7 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     [super viewDidLoad];
     [self loadStoredDatasource];
     [self setupTableView];
+    self.navigationItem.leftBarButtonItem = self.editButtonItem;
 }
 
 -(void)loadStoredDatasource
@@ -59,6 +61,8 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     NSString *cellId = NSStringFromClass([METodoListItemTableViewCell class]);
     UINib *nib = [UINib nibWithNibName:cellId bundle:nil];
     [self.tableView registerNib:nib forCellReuseIdentifier:cellId];
+    
+    self.tableView.allowsSelectionDuringEditing = YES;
 }
 
 -(void)viewWillAppear:(BOOL)animated
@@ -79,6 +83,14 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 {
     [super viewWillDisappear:animated];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+#pragma mark - Properties
+
+-(void)setEditing:(BOOL)editing animated:(BOOL)animated
+{
+    [super setEditing:editing animated:animated];
+    [self.tableView setEditing:editing animated:animated];
 }
 
 #pragma mark - UITableViewDataSource
@@ -147,23 +159,42 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     METodoListItem *item = [datasource objectAtIndex:fromIndexPath.row];
     
     if (fromIndexPath.section == toIndexPath.section){
-        //Item moved within same section - update underlying model location
+        //Item dragged within same section - update underlying model location
         [datasource removeObjectAtIndex:fromIndexPath.row];
         [datasource insertObject:item atIndex:toIndexPath.row];
+        [self saveState];
     } else {
-        //Item moved to different section - save destination indexpath and toggle completed property
-        self.itemReorderDestinationIndexPath = toIndexPath;
+        //Item dragged to different section - save destination indexpath and toggle completed property
+        self.indexPathOfReorderDestination = toIndexPath;
         item.completed = !item.completed;
     }
 }
 
 -(NSArray *)tableView:(UITableView *)tableView editActionsForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    BOOL itemIsCompleted = indexPath.section == METodoListSectionCompleted;
-    UITableViewRowAction *toggleSectionAction = [self actionToggleItemCompleted:itemIsCompleted];
-    UITableViewRowAction *deleteItemAction = [self actionDeleteItemFromIndexPath:indexPath];
-    
-    return @[deleteItemAction, toggleSectionAction];
+    UITableViewRowAction *deleteItemAction = [self actionDeleteItemAtIndexPath:indexPath];
+    UITableViewRowAction *editItemAction = [self actionEditItemAtIndexPath:indexPath];
+    return @[deleteItemAction, editItemAction];
+}
+
+-(UITableViewRowAction*)actionEditItemAtIndexPath:(NSIndexPath*)indexPath
+{
+    return [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleNormal
+                                              title:NSLocalizedString(@"Edit", nil)
+                                            handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
+                                                METodoListItem *item = [self itemAtIndexPath:indexPath];
+                                                [self editItem:item];
+                                            }];
+}
+-(UITableViewRowAction*)actionDeleteItemAtIndexPath:(NSIndexPath*)indexPath
+{
+    return [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDestructive
+                                              title:NSLocalizedString(@"Delete", nil)
+                                            handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
+                                                METodoListItem *item = [self itemAtIndexPath:indexPath];
+                                                [self deleteItem:item fromSection:indexPath.section];
+                                                [self saveState];
+                                            }];
 }
 
 -(void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
@@ -173,19 +204,13 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    [tableView setEditing:!tableView.editing animated:YES];
+    METodoListItem *item = [self itemAtIndexPath:indexPath];
+    if (self.isEditing){
+        [self editItem:item];
+    } else {
+        item.completed = !item.completed;
+    }
 }
-
--(BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    return YES;
-}
-
--(BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
-{
-    return YES;
-}
-
 
 #pragma mark - Navigation
 
@@ -194,7 +219,16 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     if ([segue.identifier isEqualToString:NSStringFromClass([MEAddTodoItemViewController class])]){
         UINavigationController *destVc = segue.destinationViewController;
         MEAddTodoItemViewController *addItemVc = (MEAddTodoItemViewController*)destVc.topViewController;
-        addItemVc.delegate = self;
+        [self configureAddItemViewController:addItemVc sender:sender];
+    }
+}
+
+-(void)configureAddItemViewController:(MEAddTodoItemViewController*)vc sender:(id)sender
+{
+    vc.delegate = self;
+    
+    if ([sender isMemberOfClass:[METodoListItem class]]){
+        vc.item = sender;
     }
 }
 
@@ -210,6 +244,16 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     });
 }
 
+-(void)MEAddTodoItemViewController:(MEAddTodoItemViewController *)vc didEditItem:(METodoListItem *)item
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.tableView reloadData];
+        [vc.presentingViewController dismissViewControllerAnimated:YES completion:^{
+            [self saveState];
+        }];
+    });
+}
+
 -(void)MEAddTodoItemViewControllerDidCancelItemCreation:(MEAddTodoItemViewController *)vc
 {
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -218,6 +262,11 @@ typedef NS_ENUM(NSInteger, METodoListSection)
 }
 
 #pragma mark - Helpers
+
+-(void)editItem:(METodoListItem*)item
+{
+    [self performSegueWithIdentifier:NSStringFromClass([MEAddTodoItemViewController class]) sender:item];
+}
 
 -(void)deleteItem:(METodoListItem*)item fromSection:(NSInteger)section
 {
@@ -229,14 +278,13 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     if ([self.tableView numberOfRowsInSection:section] != datasource.count){
         //Model-view mismatch - update view
         NSIndexPath *indexPath = [NSIndexPath indexPathForRow:row inSection:section];
-        [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+        [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
     }
 }
 
 -(void)addItem:(METodoListItem*)item toSection:(NSInteger)section
 {
-    NSMutableArray *datasource = [self datasourceFromSection:section];
-    [self insertItem:item intoIndexPath:[NSIndexPath indexPathForRow:datasource.count inSection:section]];
+    [self insertItem:item intoIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
 }
 
 -(void)insertItem:(METodoListItem*)item intoIndexPath:(NSIndexPath*)indexPath
@@ -247,7 +295,9 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     
     if ([self.tableView numberOfRowsInSection:indexPath.section] != datasource.count){
         //Model-view mismatch - update view
-        [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+        [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
+    } else {
+        [self.tableView reloadData];
     }
 }
 
@@ -262,32 +312,16 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     return section == METodoListSectionIncompleted ? self.incompletedItems : self.completedItems;
 }
 
--(UITableViewRowAction*)actionToggleItemCompleted:(BOOL)itemIsCompleted
+-(void)saveState
 {
-    NSString *actionTitle = itemIsCompleted ? @"Undo" : @"Done";
-    
-    return [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleNormal
-                                              title:actionTitle
-                                            handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
-                                                METodoListItem *item = [self itemAtIndexPath:indexPath];
-                                                item.completed = !item.completed;
-                                            }];
+    [NSUserDefaults updateIncompetedTodoItems:self.incompletedItems];
+    [NSUserDefaults updateCompletedTodoItems:self.completedItems];
 }
 
--(UITableViewRowAction*)actionDeleteItemFromIndexPath:(NSIndexPath*)indexPath
-{
-    return [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDestructive
-                                              title:@"Delete"
-                                            handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
-                                                METodoListItem *item = [self itemAtIndexPath:indexPath];
-                                                [self deleteItem:item fromSection:indexPath.section];
-                                                [self saveState];
-                                            }];
-}
 
 /*
  - Triggered when the 'METodoItem.completed' property is updated
- - Updates models and UI: moves the cell from one section to the other, depending on the 'item.completed' value
+ - Updates data source and UI: moves the cell from one section to the other, depending on the 'item.completed' value
  - Updates local storage
  */
 -(void)METodoItemWasUpdated:(NSNotification*)notification
@@ -296,36 +330,26 @@ typedef NS_ENUM(NSInteger, METodoListSection)
     NSInteger sourceSection = item.completed ? METodoListSectionIncompleted : METodoListSectionCompleted;
     NSInteger destinationSection = item.completed ? METodoListSectionCompleted : METodoListSectionIncompleted;
     
-    
     [CATransaction begin];
     
     [CATransaction setCompletionBlock:^{
+        if (self.indexPathOfReorderDestination){
+            //User dragged item to new section - Insert item in specified indexpath
+            [self insertItem:item intoIndexPath:self.indexPathOfReorderDestination];
+            self.indexPathOfReorderDestination = nil;
+        } else {
+            //User toggled item.complete - append item to destination section
+            [self addItem:item toSection:destinationSection];
+        }
+
         [self saveState];
     }];
-    
-    [self.tableView beginUpdates];
     
     //Remove item from source section
     [self deleteItem:item fromSection:sourceSection];
     
-    if (self.itemReorderDestinationIndexPath){
-        //User dragged item to new section - Insert item in specified indexpath
-        [self insertItem:item intoIndexPath:self.itemReorderDestinationIndexPath];
-        self.itemReorderDestinationIndexPath = nil;
-    } else {
-        //User toggled item.complete - append item to destination section
-        [self addItem:item toSection:destinationSection];
-    }
-    
-    [self.tableView endUpdates];
     
     [CATransaction commit];
-}
-
--(void)saveState
-{
-    [NSUserDefaults updateIncompetedTodoItems:self.incompletedItems];
-    [NSUserDefaults updateCompletedTodoItems:self.completedItems];
 }
 
 
