@@ -1,0 +1,18 @@
+√ 0) Mark item as complete / mark item as incomplete
+√ 1) Delete items
+√ 2) Reorder items
+√ 3) Local storage
+√ 4) Improve UI
+
+5) Improve/Refactor code, 
+  5.1) patterns
+  5.2) Baseclasses
+  5.3) Categories
+  5.4) Methods
+
+
+Think about improvements, scaling, etc
+  - Core data instead of USerDefaults
+  - KVO vs Notifications
+  - Validation
+  - Localization
